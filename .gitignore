@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+
+# 本机设置：每个人机器上的 ComfyUI 地址与模型文件名都不一样，
+# 首次运行会自动按默认值重新生成
+config.json
+
+# 你做的书（工具仓库里不该带工程数据）
+我的绘本/
+*.pdf
+
+# 但示例里如果以后加了成品 PDF，要能提交
+!examples/**/*.pdf
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store

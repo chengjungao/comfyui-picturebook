@@ -1,0 +1,588 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "revision": 0,
+  "last_node_id": 11,
+  "last_link_id": 11,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "MarkdownNote",
+      "pos": [
+        1500,
+        40
+      ],
+      "size": [
+        640,
+        620
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "使用说明",
+      "widgets_values": [
+        "# 内页插图 · 界面工作流\n\n这是《1-角色定妆照》的配套，用来出**每一页的插图**。\n每一页都拿**同一张**定妆照当参考图 —— 这是全书角色一致的唯一来源。\n\n---\n\n## 三条铁律\n\n**① 主参考图必换。** 「载入角色设定图」默认是 `char_sheet.png`。\n把它换成**你自己的角色主视觉**（放 `ComfyUI/input/` 里）。这一张图同时决定：\n\n- **角色长相**（毛色、眼睛、画风全靠它）\n- **输出尺寸**（尺寸取自**第一张**参考图）\n\n**② `denoise` 必须保持 `1.0`。** 想「少改一点」而调低会让画面**结构性崩坏**\n（实测 0.75 → SSIM 0.011）。原因是 Qwen 的采样起点是全零潜空间，\n不是参考图。想少改只能改提示词。\n\n**③ 参考图不是「起点」，是「并排的上下文」。** 参考图经 VAE 编码后，\n在 DiT 里被 `torch.cat` 拼进注意力序列（`ldm/qwen_image/model.py:489`），\n25 步全程可见。所以角色特征不会被采样冲掉。\n\n---\n\n## 改哪里\n\n| 想改什么 | 改哪个节点 |\n|---|---|\n| 这一页画什么 | 「这一页的画面描述」的中文提示词 |\n| 出图尺寸 | **不要去动 latent**，改主参考图的尺寸即可 |\n| 换随机结果 | KSampler 的 `seed`（`control_after_generate` 设 randomize） |\n\n---\n\n## 多参考图（配角 / 多角色同框）\n\n节点支持 `image_1` … `image_16`（上限 16 张）。**槽位已预留**：\n把左下角「（可选）第 2 张参考图」的 IMAGE 输出，拖到\n「这一页的画面描述」上的 `images.image_2` 即可（节点上还有 `image_3` 空槽）。\n\n⚠️ **`image_1` 必须永远是横版角色设定图**，新增的往后排 ——\n因为输出尺寸只看第一张。\n\n适用场景：\n\n- 配角跨页出场（松鼠、鹭鸟）→ 给它也做一张设定图\n- 极端视角（背影、俯视、夜景）→ 先单独出一张该角度的图当第二参考图\n- 多角色同框 → 每角色一张\n\n---\n\n## ⚠️ 千万不要这样做\n\n**别把上一页的产物当第二张参考图。** 很多人为了「更连贯」这么干，\n结果是误差**逐页累积** —— 上一页的细微偏差进入参考段，再被下一页放大，\n几页之后主角就认不出是同一个人了。\n要加就加**配角设定图**或**该视角的专用图**。\n\n---\n\n## 一致性是「强条件」，不是「硬保证」\n\n模型**没有任何跨图记忆**，每张都是独立生成。手法正确能让它稳，\n但换 seed 出两次结果不会完全相同。正确姿势是\n**批量出 → 联系表粗筛 → 单页重出**，不是一次到位。\n"
+      ],
+      "color": "#432",
+      "bgcolor": "#653",
+      "properties": {}
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        40,
+        80
+      ],
+      "size": [
+        360,
+        340
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "1) 载入角色设定图（关键！定角色 + 定尺寸）",
+      "widgets_values": [
+        "char_sheet.png",
+        "image"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "UNETLoader",
+      "pos": [
+        440,
+        160
+      ],
+      "size": [
+        400,
+        60
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader"
+      },
+      "title": "Qwen DiT",
+      "widgets_values": [
+        "qwen_image_2.1_int8_convrot.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CLIPLoader",
+      "pos": [
+        440,
+        250
+      ],
+      "size": [
+        400,
+        90
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "title": "Qwen 文本编码器",
+      "widgets_values": [
+        "qwen3vl_8b_int8_convrot.safetensors",
+        "qwen_image",
+        "default"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "VAELoader",
+      "pos": [
+        440,
+        320
+      ],
+      "size": [
+        400,
+        60
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            3,
+            10
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "title": "Qwen VAE",
+      "widgets_values": [
+        "qwen_image_2.1_vae_bf16.safetensors"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "QwenImage21Cache",
+      "pos": [
+        440,
+        410
+      ],
+      "size": [
+        400,
+        100
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "QwenImage21Cache"
+      },
+      "title": "KV Cache（16GB 建议开）",
+      "widgets_values": [
+        "auto",
+        "default"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "TextEncodeQwenImage21",
+      "pos": [
+        900,
+        410
+      ],
+      "size": [
+        580,
+        360
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        },
+        {
+          "name": "images.image_1",
+          "type": "IMAGE",
+          "shape": 7,
+          "link": 2
+        },
+        {
+          "name": "images.image_2",
+          "type": "IMAGE",
+          "shape": 7,
+          "link": null
+        },
+        {
+          "name": "images.image_3",
+          "type": "IMAGE",
+          "shape": 7,
+          "link": null
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "shape": 7,
+          "link": 3
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          }
+        },
+        {
+          "name": "negative_prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "negative_prompt"
+          }
+        },
+        {
+          "name": "resolution",
+          "type": "INT",
+          "widget": {
+            "name": "resolution"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            7
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            8
+          ],
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextEncodeQwenImage21"
+      },
+      "title": "2) 这一页的画面描述（改这里）",
+      "widgets_values": [
+        "保持参考图中这只小狐狸的样貌、配色和画风完全一致。\n\n【这一页的画面】\n小狐狸站在铺满落叶的林间小路上，回头看，大尾巴扬起，\n小路两侧是高大的树干，阳光从树缝里洒下来，枫叶在风里飘。\n\n【风格】\n柔和水彩绘本插画风格，温暖秋色，柔和光线，构图干净，留有余地，画面内没有任何文字。",
+        "",
+        1024
+      ]
+    },
+    {
+      "id": 8,
+      "type": "KSampler",
+      "pos": [
+        1520,
+        410
+      ],
+      "size": [
+        340,
+        280
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 5
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 7
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "title": "3) 采样（denoise 必须 1.0）",
+      "widgets_values": [
+        20261002,
+        "fixed",
+        25,
+        1.0,
+        "euler",
+        "simple",
+        1.0
+      ]
+    },
+    {
+      "id": 9,
+      "type": "VAEDecode",
+      "pos": [
+        1520,
+        710
+      ],
+      "size": [
+        340,
+        60
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 9
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "title": "解码"
+    },
+    {
+      "id": 10,
+      "type": "SaveImage",
+      "pos": [
+        1900,
+        780
+      ],
+      "size": [
+        340,
+        400
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "title": "4) 保存",
+      "widgets_values": [
+        "pb_page"
+      ]
+    },
+    {
+      "id": 11,
+      "type": "LoadImage",
+      "pos": [
+        40,
+        1340
+      ],
+      "size": [
+        360,
+        340
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "（可选）第 2 张参考图 → 拖到 images.image_2",
+      "widgets_values": [
+        "char_sheet.png",
+        "image"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      4,
+      0,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      2,
+      0,
+      7,
+      1,
+      "IMAGE"
+    ],
+    [
+      3,
+      5,
+      0,
+      7,
+      4,
+      "VAE"
+    ],
+    [
+      4,
+      3,
+      0,
+      6,
+      0,
+      "MODEL"
+    ],
+    [
+      5,
+      6,
+      0,
+      8,
+      0,
+      "MODEL"
+    ],
+    [
+      6,
+      7,
+      0,
+      8,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      7,
+      1,
+      8,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      8,
+      7,
+      2,
+      8,
+      3,
+      "LATENT"
+    ],
+    [
+      9,
+      8,
+      0,
+      9,
+      0,
+      "LATENT"
+    ],
+    [
+      10,
+      5,
+      0,
+      9,
+      1,
+      "VAE"
+    ],
+    [
+      11,
+      9,
+      0,
+      10,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.75,
+      "offset": [
+        0,
+        0
+      ]
+    }
+  },
+  "version": 0.4
+}

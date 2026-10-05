@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>绘本工坊</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="logo">✦</span>
+    <span>绘本工坊</span>
+  </div>
+  <nav class="steps" id="steps">
+    <button data-step="env"    class="active">1 · 环境</button>
+    <button data-step="story">2 · 分镜</button>
+    <button data-step="draw">3 · 出图</button>
+    <button data-step="book">4 · 成书</button>
+  </nav>
+  <div class="health" id="health" title="点一下重新检查">
+    <span class="dot" id="healthDot"></span>
+    <span id="healthText">正在检查 ComfyUI…</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ 1 环境 ============ -->
+<section class="panel active" id="step-env">
+  <h2>先把路铺好</h2>
+  <p class="lead">
+    这一页确认两件事：ComfyUI 是不是在跑、模型对不对。
+    都打上勾就可以去第 2 步。出图全部发生在你自己的电脑上，不联网、没有额度。
+  </p>
+
+  <div class="card" id="envReport">
+    <div class="muted">正在检查…</div>
+  </div>
+
+  <details class="card" open>
+    <summary>设置（改完自动记到 config.json）</summary>
+    <div class="grid">
+      <label>ComfyUI 地址
+        <input id="cfgUrl" type="text" placeholder="http://127.0.0.1:8188">
+      </label>
+      <label>图片宽度
+        <input id="cfgW" type="number" step="32">
+      </label>
+      <label>图片高度
+        <input id="cfgH" type="number" step="32">
+      </label>
+      <label>采样步数
+        <input id="cfgSteps" type="number" min="1" max="80">
+      </label>
+      <label>随机种子（决定复现）
+        <input id="cfgSeed" type="number">
+      </label>
+      <label>浏览器路径（留空自动找）
+        <input id="cfgBrowser" type="text" placeholder="自动探测 Chrome / Edge">
+      </label>
+    </div>
+    <h3>模型文件名</h3>
+    <p class="muted small">
+      这一栏读的是 ComfyUI 实际认识的模型，不是你硬盘上的文件名 ——
+      两者不一致是出图失败最常见的原因。
+    </p>
+    <div class="grid">
+      <label>扩散模型 <select id="cfgUnet"></select>
+        <input id="cfgUnetManual" type="text" class="manual" placeholder="也可以手填文件名">
+      </label>
+      <label>文本编码器 <select id="cfgClip"></select>
+        <input id="cfgClipManual" type="text" class="manual" placeholder="也可以手填文件名">
+      </label>
+      <label>VAE <select id="cfgVae"></select>
+        <input id="cfgVaeManual" type="text" class="manual" placeholder="也可以手填文件名">
+      </label>
+    </div>
+    <div class="row end">
+      <span class="muted small" id="cfgSaved"></span>
+      <button class="primary" id="btnSaveCfg">保存设置</button>
+    </div>
+  </details>
+
+  <div class="row end">
+    <button class="primary" data-goto="story">下一步：写分镜 →</button>
+  </div>
+</section>
+
+<!-- ============ 2 分镜 ============ -->
+<section class="panel" id="step-story">
+  <h2>写分镜</h2>
+  <p class="lead">
+    每一页就两样东西：<b>画面里有什么</b>（给 AI 看）和 <b>这一页要讲的话</b>（排在图下面的文字带里）。
+    画面描述写得越具体，出图越接近你想要的。
+  </p>
+
+  <div class="card">
+    <div class="grid">
+      <label>书名 <input id="pjTitle" type="text" placeholder="小狐狸的秋日远行"></label>
+      <label>署名 <input id="pjByline" type="text" placeholder="给你的孩子 / 或者你的名字"></label>
+    </div>
+    <label>风格前缀（每一页都会加上，用来锁一致性）
+      <textarea id="pjPrefix" rows="2"></textarea>
+    </label>
+    <label>风格后缀（每一页都会加上，用来锁画风）
+      <textarea id="pjSuffix" rows="2"></textarea>
+    </label>
+    <label>版权页文字（一行一句）
+      <textarea id="pjColophon" rows="4"
+        placeholder="全书 {页数} 幅插图，{尺寸}"></textarea>
+      <span class="muted small">
+        可以直接写 <code>{页数}</code> <code>{尺寸}</code> <code>{开本}</code>
+        <code>{书名}</code> <code>{作者}</code>，排版时会自动换成真实数字，
+        免得手填的页数跟成品对不上。
+      </span>
+    </label>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <h3 style="margin:0">页面</h3>
+      <span class="muted small" id="storyStats"></span>
+      <span class="spacer"></span>
+      <button id="btnAddPage">+ 加一页</button>
+      <button id="btnSavePj" class="primary">保存分镜</button>
+    </div>
+    <div id="issues" class="issues"></div>
+    <table class="pages" id="pagesTable">
+      <thead>
+        <tr>
+          <th style="width:3.5rem">#</th>
+          <th style="width:7rem">类型</th>
+          <th style="width:9rem">id</th>
+          <th>画面描述</th>
+          <th style="width:26%">这一页的话</th>
+          <th style="width:6.5rem">图片</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="row end">
+    <button data-goto="env">← 回上一步</button>
+    <button class="primary" data-goto="draw">下一步：出图 →</button>
+  </div>
+</section>
+
+<!-- ============ 3 出图 ============ -->
+<section class="panel" id="step-draw">
+  <h2>出图</h2>
+  <p class="lead">
+    顺序不能反：<b>先出一张角色定妆照，人眼看一眼确认，再批量出全部内页。</b>
+    定妆照是整本书角色一致的唯一来源，它错了后面每一页都跟着错。
+  </p>
+
+  <div class="card">
+    <div class="row">
+      <h3 style="margin:0">① 角色定妆照</h3>
+      <span class="spacer"></span>
+      <span class="muted small" id="keyStatus"></span>
+    </div>
+    <label>定妆照提示词（一身干净的全身像，别让它自带复杂场景）
+      <textarea id="keyPrompt" rows="4"></textarea>
+    </label>
+    <label class="fileline">
+      <span>或者用你自己的图当定妆照（自己画的、别处出好的都行）</span>
+      <input type="file" id="keyFile" accept="image/*">
+    </label>
+    <div class="row">
+      <button class="primary" id="btnKey">生成定妆照</button>
+      <span class="muted small" id="keyHint"></span>
+    </div>
+    <div class="keypreview" id="keyPreview"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <h3 style="margin:0">② 批量出内页</h3>
+      <span class="spacer"></span>
+      <button class="primary" id="btnPages">出全部页面</button>
+      <button id="btnCancel" disabled>取消</button>
+    </div>
+    <div class="progress"><div class="bar" id="progBar"></div></div>
+    <div class="muted small" id="progText">还没有开始</div>
+    <div class="thumbs" id="thumbs"></div>
+  </div>
+
+  <div class="row end">
+    <button data-goto="story">← 回上一步</button>
+    <button class="primary" data-goto="book">下一步：成书 →</button>
+  </div>
+</section>
+
+<!-- ============ 4 成书 ============ -->
+<section class="panel" id="step-book">
+  <h2>成书</h2>
+  <p class="lead">
+    排版是另外做的，不让模型在画面里写字。所以正文想改随时改，改完重新排一次就行，不用重画图。
+  </p>
+
+  <div class="card">
+    <div class="row">
+      <button class="primary" id="btnBuild">排版</button>
+      <button id="btnPreview">在浏览器里预览</button>
+      <button class="primary" id="btnPdf">导出 PDF</button>
+      <button id="btnFolder">打开工程文件夹</button>
+    </div>
+    <div class="muted small" id="bookInfo"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">每一页的图片</h3>
+    <div class="thumbs big" id="bookThumbs"></div>
+  </div>
+
+  <div class="row end">
+    <button data-goto="draw">← 回上一步</button>
+  </div>
+</section>
+
+</main>
+
+<aside id="logPanel">
+  <div class="row">
+    <b>日志</b>
+    <span class="spacer"></span>
+    <button class="tiny" id="btnClearLog">清空</button>
+  </div>
+  <div id="log"></div>
+</aside>
+
+<div id="toast"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
