@@ -52,6 +52,9 @@ async function api(path, body) {
 function goto(step) {
   $$(".steps button").forEach(b => b.classList.toggle("active", b.dataset.step === step));
   $$(".panel").forEach(p => p.classList.toggle("active", p.id === "step-" + step));
+  // 切步骤回到顶部：分镜页很长，不回顶的话换步后停在半空，看不到标题
+  const scroller = document.querySelector("main");
+  if (scroller) scroller.scrollTop = 0;
   // 出图要跑几分钟，中途刷新很常见，所以把当前步写进地址栏，
   // 刷新后能回到原处，也能直接分享这一步的链接。
   if (location.hash.slice(1) !== step) location.hash = step;

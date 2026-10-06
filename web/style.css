@@ -11,6 +11,9 @@
   --warn: #B7791F;
   --err: #B23A2F;
   --radius: 10px;
+  --content: 940px;      /* 正文可读宽度，四个步骤共用同一个 */
+  --pad-x: 26px;         /* 左右留白，顶栏与主区保持一致 */
+  --log-w: 320px;        /* 右侧日志面板宽度 */
 }
 
 * { box-sizing: border-box; }
@@ -22,7 +25,7 @@ body {
   font: 14px/1.65 "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB",
         -apple-system, "Segoe UI", sans-serif;
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: minmax(0, 1fr) var(--log-w);
   grid-template-rows: auto 1fr;
   grid-template-areas: "head head" "main log";
   height: 100vh;
@@ -36,7 +39,11 @@ header {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 0 18px;
+  /* 左侧起点跟着正文的中轴走，避免上面贴左、下面居中而错轴；
+     窄窗口时 max() 兜底成普通留白 */
+  padding-left: max(var(--pad-x),
+                    calc((100% - var(--log-w) - var(--content)) / 2));
+  padding-right: var(--pad-x);
   height: 56px;
   background: var(--card);
   border-bottom: 1px solid var(--line);
@@ -46,6 +53,7 @@ header {
   display: flex; align-items: center; gap: 8px;
   font-size: 16px; font-weight: 700; color: var(--accent);
   letter-spacing: 1px;
+  white-space: nowrap;
 }
 .brand .logo { font-size: 18px; }
 
@@ -60,6 +68,7 @@ header {
   cursor: pointer;
   font-size: 13px;
   font-family: inherit;
+  white-space: nowrap;
 }
 .steps button:hover { background: var(--accent-soft); color: var(--accent); }
 .steps button.active {
@@ -74,6 +83,12 @@ header {
   padding: 5px 10px;
   border-radius: 999px;
   background: var(--bg);
+  /* 顶栏窄下来时让状态文字先被裁短，而不是把品牌和步骤挤到换行 */
+  min-width: 0;
+}
+.health #healthText {
+  min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .health .dot {
   width: 8px; height: 8px; border-radius: 50%;
@@ -88,10 +103,18 @@ header {
 main {
   grid-area: main;
   overflow-y: auto;
-  padding: 22px 26px 60px;
+  padding: 22px var(--pad-x) 60px;
+  /* 滚动条槽常驻：切换步骤时内容高度变化，不会让居中轴线左右跳一下 */
+  scrollbar-gutter: stable;
 }
 
-.panel { display: none; max-width: 940px; }
+/* 居中：内容在可用区域内水平居中，宽屏下两侧留白对称 */
+.panel {
+  display: none;
+  width: 100%;
+  max-width: var(--content);
+  margin: 0 auto;
+}
 .panel.active { display: block; }
 
 h2 {
@@ -306,6 +329,7 @@ table.pages .thumbcell .none { color: var(--muted); font-size: 11px; }
 #toast.ok  { background: var(--ok); }
 
 @media (max-width: 900px) {
-  body { grid-template-columns: 1fr; grid-template-areas: "head" "main"; }
+  body { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "main"; }
   #logPanel { display: none; }
+  header { padding: 0 var(--pad-x); }
 }
